@@ -1,0 +1,187 @@
+type: edu
+custom_name: stage1
+files:
+- name: build.gradle
+  visible: true
+  text: |-
+    buildscript {
+        apply plugin: 'hyperskill'
+
+        repositories {
+            mavenCentral()
+        }
+        dependencies {
+            classpath "org.springframework.boot:spring-boot-gradle-plugin:$hs.spring.bootVersion"
+            classpath "io.spring.gradle:dependency-management-plugin:$hs.spring.dependencyManagementVersion"
+        }
+    }
+
+    apply plugin: 'java'
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+
+    repositories {
+        mavenCentral()
+    }
+
+    sourceSets.main.resources.srcDirs = ["src/resources"]
+
+    dependencies {
+        implementation 'org.springframework.boot:spring-boot-starter'
+        implementation 'org.springframework.boot:spring-boot-starter-actuator'
+        implementation 'org.springframework.boot:spring-boot-starter-web'
+    }
+  learner_created: false
+- name: src/engine/WebQuizEngine.java
+  visible: true
+  text: |
+    package engine;
+
+    import org.springframework.boot.SpringApplication;
+    import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+    @SpringBootApplication
+    public class WebQuizEngine {
+
+        public static void main(String[] args) {
+            SpringApplication.run(WebQuizEngine.class, args);
+        }
+
+    }
+  learner_created: false
+- name: src/resources/application.properties
+  visible: true
+  text: |
+    server.port=8889
+    management.endpoints.web.exposure.include=*
+    management.endpoint.shutdown.enabled=true
+  learner_created: false
+- name: test/tests/WebQuizEngineTest.java
+  visible: false
+  text: |
+    package tests;
+
+    import engine.WebQuizEngine;
+    import org.hyperskill.hstest.dynamic.input.DynamicTesting;
+    import org.hyperskill.hstest.dynamic.input.DynamicTestingMethod;
+    import org.hyperskill.hstest.exception.outcomes.WrongAnswer;
+    import org.hyperskill.hstest.mocks.web.request.HttpRequest;
+    import org.hyperskill.hstest.mocks.web.response.HttpResponse;
+    import org.hyperskill.hstest.stage.SpringTest;
+    import org.hyperskill.hstest.testcase.CheckResult;
+
+    import java.util.Map;
+
+    import static org.hyperskill.hstest.testing.expect.Expectation.expect;
+    import static org.hyperskill.hstest.testing.expect.json.JsonChecker.*;
+
+    public class WebQuizEngineTest extends SpringTest {
+        public WebQuizEngineTest() {
+            super(WebQuizEngine.class);
+        }
+
+        static void checkStatusCode(HttpResponse resp, int status) {
+            if (resp.getStatusCode() != status) {
+                throw new WrongAnswer(
+                    resp.getRequest().getMethod() + " " +
+                        resp.getRequest().getLocalUri() +
+                        " should respond with status code " + status + ", " +
+                        "responded: " + resp.getStatusCode() + "\n\n" +
+                        "Response body:\n\n" + resp.getContent()
+                );
+            }
+        }
+
+        @DynamicTestingMethod
+        public DynamicTesting[] dt = new DynamicTesting[] {
+            this::checkQuizReceived,
+            () -> checkQuizSuccess("2", true),
+            () -> checkQuizSuccess("1", false)
+        };
+
+        private CheckResult checkQuizReceived() {
+            String url = "/api/quiz";
+
+            HttpResponse resp = get(url).send();
+            checkStatusCode(resp, 200);
+
+            expect(resp.getContent()).asJson().check(
+                isObject()
+                    .value("title", isString())
+                    .value("text", isString())
+                    .value("options", isArray(4, isString()))
+            );
+
+            return CheckResult.correct();
+        }
+
+        private CheckResult checkQuizSuccess(String answerSent, boolean shouldResponse) {
+            String url = "/api/quiz";
+
+            HttpRequest req = post(url, Map.of("answer", answerSent));
+            HttpResponse resp = req.send();
+
+            checkStatusCode(resp, 200);
+
+            expect(resp.getContent()).asJson().check(
+                isObject()
+                    .value("success", shouldResponse)
+                    .value("feedback", isString())
+            );
+
+            return CheckResult.correct();
+        }
+    }
+  learner_created: false
+- name: src/engine/RestController.java
+  visible: true
+  learner_created: true
+- name: src/engine/QuizService.java
+  visible: true
+  learner_created: true
+- name: src/engine/Feedback.java
+  visible: true
+  learner_created: true
+- name: src/engine/Quiz.java
+  visible: true
+  learner_created: true
+feedback_link: https://hyperskill.org/learn/step/8252#comment
+status: Failed
+feedback:
+  message: |-
+    Wrong answer in test #2
+
+    POST /api/quiz should respond with status code 200, responded: 405
+
+    Response body:
+
+    {&quot;timestamp&quot;:&quot;2022-01-25T04:08:54.993+00:00&quot;,&quot;status&quot;:405,&quot;error&quot;:&quot;Method Not Allowed&quot;,&quot;path&quot;:&quot;/api/quiz&quot;}
+
+    Please find below the output of your program during this failed test.
+
+    ---
+
+    .   ____          _            __ _ _
+     /\\ / ___&#39;_ __ _ _(_)_ __  __ _ \ \ \ \
+    ( ( )\___ | &#39;_ | &#39;_| | &#39;_ \/ _` | \ \ \ \
+     \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+      &#39;  |____| .__|_| |_|_| |_\__, | / / / /
+     =========|_|==============|___/=/_/_/_/
+     :: Spring Boot ::                (v2.5.6)
+
+    2022-01-25 04:08:47.190  INFO 11932 --- [    Test worker] engine.WebQuizEngine                     : Starting WebQuizEngine using Java 17.0.1 on DESKTOP-ET034TC with PID 11932 (started by Haedes in C:\Users\Haedes\IdeaProjects\Web Quiz Engine\Web Quiz Engine\task)
+    2022-01-25 04:08:47.195  INFO 11932 --- [    Test worker] engine.WebQuizEngine                     : No active profile set, falling back to default profiles: default
+    2022-01-25 04:08:51.879  INFO 11932 --- [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 8889 (http)
+    2022-01-25 04:08:51.913  INFO 11932 --- [    Test worker] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+    2022-01-25 04:08:51.914  INFO 11932 --- [    Test worker] org.apache.catalina.core.StandardEngine  : Starting Servlet engine: [Apache Tomcat/9.0.54]
+    2022-01-25 04:08:52.185  INFO 11932 --- [    Test worker] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+    2022-01-25 04:08:52.186  INFO 11932 --- [    Test worker] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 4871 ms
+    2022-01-25 04:08:53.846  INFO 11932 --- [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 14 endpoint(s) beneath base path &#39;/actuator&#39;
+    2022-01-25 04:08:53.930  INFO 11932 --- [    Test worker] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 8889 (http) with context path &#39;&#39;
+    2022-01-25 04:08:53.963  INFO 11932 --- [    Test worker] engine.WebQuizEngine                     : Started WebQuizEngine in 7.806 seconds (JVM running for 9.204)
+    2022-01-25 04:08:54.729  INFO 11932 --- [nio-8889-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet &#39;dispatcherServlet&#39;
+    2022-01-25 04:08:54.730  INFO 11932 --- [nio-8889-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet &#39;dispatcherServlet&#39;
+    2022-01-25 04:08:54.733  INFO 11932 --- [nio-8889-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 3 ms
+    2022-01-25 04:08:54.954  WARN 11932 --- [nio-8889-exec-2] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.HttpRequestMethodNotSupportedException: Request method &#39;POST&#39; not supported]
+  time: Tue, 25 Jan 2022 04:08:56 UTC
+record: 1
